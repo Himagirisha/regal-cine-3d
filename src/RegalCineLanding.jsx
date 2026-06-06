@@ -1,10 +1,13 @@
 import { useRef, useEffect, Suspense } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Text3D, Environment, Float } from '@react-three/drei'
+import { Text3D, Float } from '@react-three/drei'
 import { motion } from 'framer-motion'
 import * as THREE from 'three'
 
-// ─── Rose-gold 'R' with physical material ────────────────────────────────────
+// Font served locally — no CDN dependency on mobile
+const FONT_URL = `${import.meta.env.BASE_URL}fonts/helvetiker_regular.typeface.json`
+
+// ─── Rose-gold 'R' ───────────────────────────────────────────────────────────
 
 function LetterR() {
   const meshRef = useRef()
@@ -19,7 +22,7 @@ function LetterR() {
   return (
     <Text3D
       ref={meshRef}
-      font="https://threejs.org/examples/fonts/helvetiker_regular.typeface.json"
+      font={FONT_URL}
       size={2.2}
       height={0.55}
       curveSegments={16}
@@ -31,22 +34,21 @@ function LetterR() {
       position={[-1.3, -1.15, 0]}
     >
       R
+      {/* iridescence removed — unsupported shader on many mobile GPUs */}
       <meshPhysicalMaterial
         color="#c58b73"
         metalness={0.95}
-        roughness={0.18}
-        envMapIntensity={3.5}
+        roughness={0.2}
+        envMapIntensity={0.8}
         clearcoat={0.9}
         clearcoatRoughness={0.1}
-        iridescence={0.3}
-        iridescenceIOR={1.9}
         reflectivity={1}
       />
     </Text3D>
   )
 }
 
-// ─── Spotlight that smoothly chases the cursor / touch ───────────────────────
+// ─── Mouse / touch tracking spotlight ───────────────────────────────────────
 
 function TrackingSpotlight({ mouseRef }) {
   const spotRef = useRef()
@@ -80,39 +82,45 @@ function TrackingSpotlight({ mouseRef }) {
   )
 }
 
-// ─── Three.js scene ──────────────────────────────────────────────────────────
+// ─── Scene ───────────────────────────────────────────────────────────────────
+// No Environment preset — avoids CDN fetches that fail/time-out on mobile.
+// RectAreaLight from the front replicates the studio-box effect reliably.
 
 function Scene({ mouseRef }) {
   return (
     <>
       <color attach="background" args={['#08070e']} />
 
-      {/* Ambient fill — very subtle */}
-      <ambientLight intensity={0.06} />
+      <ambientLight intensity={0.2} />
 
-      {/* Static accent lights for depth */}
+      {/* Front soft box — replaces HDR studio preset, zero network calls */}
+      <rectAreaLight
+        position={[0, 1, 5]}
+        intensity={5}
+        width={10}
+        height={7}
+        color="#fff5ee"
+      />
+
+      {/* Colour-accent fills */}
       <spotLight
         position={[-6, 3, 4]}
-        intensity={28}
+        intensity={38}
         angle={0.55}
         penumbra={1}
         color="#a07fc0"
       />
       <spotLight
         position={[6, 2, 3]}
-        intensity={18}
+        intensity={28}
         angle={0.6}
         penumbra={1}
         color="#c58b73"
       />
 
-      {/* Mouse-tracking key light */}
+      {/* Interactive key light */}
       <TrackingSpotlight mouseRef={mouseRef} />
 
-      {/* HDR environment for metallic reflections */}
-      <Environment preset="studio" />
-
-      {/* Floating, gently oscillating letter */}
       <Suspense fallback={null}>
         <Float
           speed={1.3}
@@ -127,21 +135,19 @@ function Scene({ mouseRef }) {
   )
 }
 
-// ─── Framer-motion text overlay ───────────────────────────────────────────────
+// ─── Framer-motion overlay ────────────────────────────────────────────────────
+// filter:blur removed from variants — causes iOS Safari compositing crash
 
 const container = {
   hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.24, delayChildren: 0.5 },
-  },
+  visible: { transition: { staggerChildren: 0.24, delayChildren: 0.5 } },
 }
 
 const item = {
-  hidden: { opacity: 0, y: 26, filter: 'blur(8px)' },
+  hidden: { opacity: 0, y: 28 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: 'blur(0px)',
     transition: { duration: 1.05, ease: [0.22, 1, 0.36, 1] },
   },
 }
@@ -166,13 +172,12 @@ function Overlay() {
         animate="visible"
         style={{ textAlign: 'center', width: '100%', maxWidth: 660 }}
       >
-        {/* Eyebrow label */}
         <motion.p
           variants={item}
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 'clamp(9px, 1.1vw, 12px)',
-            letterSpacing: '0.48em',
+            fontSize: 'clamp(10px, 2.5vw, 12px)',
+            letterSpacing: '0.42em',
             color: '#c58b73',
             margin: '0 0 14px',
             textTransform: 'uppercase',
@@ -181,14 +186,13 @@ function Overlay() {
           Premium Cinematic Experience
         </motion.p>
 
-        {/* Primary title */}
         <motion.h1
           variants={item}
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 'clamp(26px, 5.8vw, 70px)',
+            fontSize: 'clamp(28px, 7vw, 70px)',
             fontWeight: 300,
-            letterSpacing: '0.24em',
+            letterSpacing: '0.22em',
             color: '#f5ede6',
             margin: 0,
             textTransform: 'uppercase',
@@ -198,7 +202,6 @@ function Overlay() {
           The Regal Cine
         </motion.h1>
 
-        {/* Decorative rule */}
         <motion.div
           variants={item}
           style={{
@@ -210,22 +213,20 @@ function Overlay() {
           }}
         />
 
-        {/* Subtitle */}
         <motion.p
           variants={item}
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 'clamp(11px, 1.6vw, 17px)',
-            letterSpacing: '0.14em',
+            fontSize: 'clamp(13px, 3.5vw, 17px)',
+            letterSpacing: '0.12em',
             color: '#7a6b63',
-            margin: '0 0 clamp(22px, 4vw, 34px)',
+            margin: '0 0 clamp(22px, 5vw, 34px)',
             fontStyle: 'italic',
           }}
         >
           Where Cinema Meets Luxury
         </motion.p>
 
-        {/* CTA */}
         <motion.button
           variants={item}
           whileHover={{
@@ -238,16 +239,17 @@ function Overlay() {
           style={{
             pointerEvents: 'all',
             fontFamily: 'Georgia, "Times New Roman", serif',
-            fontSize: 'clamp(10px, 1.2vw, 13px)',
-            letterSpacing: '0.38em',
+            fontSize: 'clamp(11px, 2.8vw, 13px)',
+            letterSpacing: '0.35em',
             color: '#c58b73',
             background: 'transparent',
             border: '1px solid rgba(197, 139, 115, 0.42)',
-            padding: 'clamp(10px, 1.6vw, 14px) clamp(28px, 4.5vw, 52px)',
+            padding: 'clamp(12px, 3vw, 14px) clamp(30px, 8vw, 52px)',
             cursor: 'pointer',
             textTransform: 'uppercase',
             transition: 'all 0.35s ease',
             outline: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
           Book Experience
@@ -257,7 +259,7 @@ function Overlay() {
   )
 }
 
-// ─── Root export ─────────────────────────────────────────────────────────────
+// ─── Root ─────────────────────────────────────────────────────────────────────
 
 export default function RegalCineLanding() {
   const mouseRef = useRef({ x: 0, y: 0 })
@@ -277,7 +279,6 @@ export default function RegalCineLanding() {
         y: -(t.clientY / window.innerHeight * 2 - 1),
       }
     }
-
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('touchmove', onTouchMove, { passive: true })
     return () => {
@@ -287,11 +288,12 @@ export default function RegalCineLanding() {
   }, [])
 
   return (
+    // position:fixed + inset:0 is the only reliable full-screen approach
+    // across iOS Safari (avoids 100svh collapsing on older devices)
     <div
       style={{
-        position: 'relative',
-        width: '100vw',
-        height: '100svh',
+        position: 'fixed',
+        inset: 0,
         overflow: 'hidden',
         background: '#08070e',
       }}
@@ -300,7 +302,12 @@ export default function RegalCineLanding() {
         shadows
         dpr={[1, 2]}
         camera={{ position: [0, 0, 7.5], fov: 48 }}
-        gl={{ antialias: true, alpha: false }}
+        gl={{
+          antialias: true,
+          alpha: false,
+          powerPreference: 'high-performance',
+          failIfMajorPerformanceCaveat: false,
+        }}
         style={{ position: 'absolute', inset: 0 }}
       >
         <Scene mouseRef={mouseRef} />
