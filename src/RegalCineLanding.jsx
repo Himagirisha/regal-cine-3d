@@ -1,10 +1,9 @@
-import { useRef, useEffect, Suspense, useMemo, useState, useCallback } from 'react'
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { Text3D, Float } from '@react-three/drei'
-import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { motion, useInView, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import * as THREE from 'three'
 
-const FONT_URL = `${import.meta.env.BASE_URL}fonts/helvetiker_regular.typeface.json`
+const LOGO_URL = `${import.meta.env.BASE_URL}regal.jpg`
 const API_URL  = import.meta.env.VITE_API_URL ?? 'http://localhost:8080'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -59,49 +58,6 @@ function CinemaDustParticles() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THREE.JS — SCROLL PARALLAX WRAPPER
-// ─────────────────────────────────────────────────────────────────────────────
-
-function ScrollParallaxGroup({ scrollRef, children }) {
-  const groupRef = useRef()
-  useFrame(() => {
-    if (!groupRef.current) return
-    const progress = Math.min(Math.max(scrollRef.current / window.innerHeight, 0), 1)
-    const tScale = 1 - progress * 0.86
-    const tRotZ  = progress * Math.PI * 0.72
-    const tPosY  = progress * -5.8
-    const g = groupRef.current
-    g.scale.setScalar(THREE.MathUtils.lerp(g.scale.x, tScale, 0.07))
-    g.rotation.z = THREE.MathUtils.lerp(g.rotation.z, tRotZ, 0.07)
-    g.position.y = THREE.MathUtils.lerp(g.position.y, tPosY, 0.07)
-  })
-  return <group ref={groupRef}>{children}</group>
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// THREE.JS — REGAL LOGO MESH
-// ─────────────────────────────────────────────────────────────────────────────
-
-function RegalLogoMesh() {
-  const meshRef = useRef()
-  useFrame(({ clock }) => {
-    if (!meshRef.current) return
-    const t = clock.elapsedTime
-    meshRef.current.rotation.y = Math.sin(t * 0.28) * 0.42
-    meshRef.current.rotation.x = Math.sin(t * 0.19) * 0.09
-  })
-  return (
-    <Text3D ref={meshRef} font={FONT_URL} size={2.2} height={0.55} curveSegments={16}
-      bevelEnabled bevelThickness={0.07} bevelSize={0.04} bevelOffset={0} bevelSegments={10}
-      position={[-1.3, -1.15, 0]}>
-      R
-      <meshPhysicalMaterial color="#c58b73" metalness={0.95} roughness={0.2}
-        envMapIntensity={0.8} clearcoat={0.9} clearcoatRoughness={0.1} reflectivity={1} />
-    </Text3D>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // THREE.JS — TRACKING SPOTLIGHT
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -123,7 +79,7 @@ function TrackingSpotlight({ mouseRef }) {
 // THREE.JS — SCENE ASSEMBLY
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Scene({ mouseRef, scrollRef }) {
+function Scene({ mouseRef }) {
   return (
     <>
       <color attach="background" args={['#08070e']} />
@@ -133,13 +89,6 @@ function Scene({ mouseRef, scrollRef }) {
       <spotLight position={[6, 2, 3]} intensity={28} angle={0.6} penumbra={1} color="#c58b73" />
       <TrackingSpotlight mouseRef={mouseRef} />
       <CinemaDustParticles />
-      <Suspense fallback={null}>
-        <ScrollParallaxGroup scrollRef={scrollRef}>
-          <Float speed={1.3} rotationIntensity={0.22} floatIntensity={0.55} floatingRange={[-0.1, 0.1]}>
-            <RegalLogoMesh />
-          </Float>
-        </ScrollParallaxGroup>
-      </Suspense>
     </>
   )
 }
@@ -579,7 +528,12 @@ const heroItem = {
   visible: { opacity: 1, y: 0, transition: { duration: 1.05, ease: [0.22, 1, 0.36, 1] } },
 }
 
-function HeroOverlay() {
+function HeroOverlay({ onBookClick }) {
+  const handleBook = () => {
+    if (onBookClick) onBookClick()
+    document.getElementById('reservation')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <div style={{
       position: 'absolute', inset: 0, pointerEvents: 'none',
@@ -617,7 +571,7 @@ function HeroOverlay() {
           whileHover={{ scale: 1.04, borderColor: GOLD, color: LIGHT, boxShadow: '0 0 32px rgba(197,139,115,0.28)' }}
           whileTap={{ scale: 0.97 }}
           style={{ ...sCtaBtn, pointerEvents: 'all', fontSize: 'clamp(12px,2.8vw,14px)' }}
-          onClick={() => document.getElementById('reservation')?.scrollIntoView({ behavior: 'smooth' })}
+          onClick={handleBook}
         >
           Book Your Experience
         </motion.button>
@@ -635,6 +589,66 @@ function HeroOverlay() {
           transition={{ duration: 1.9, repeat: Infinity, ease: 'easeInOut' }}
           style={{ width: 1, height: 36, background: `linear-gradient(to bottom, ${GOLD}, transparent)` }}
         />
+      </motion.div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGAL LOGO IMAGE OVERLAY  (replaces Three.js Text3D R)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function RegalLogoOverlay({ rippling }) {
+  const { scrollY } = useScroll()
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+  const y       = useTransform(scrollY, [0, vh], [0, 90])
+  const scale   = useTransform(scrollY, [0, vh], [1, 0.72])
+  const opacity = useTransform(scrollY, [0, vh * 0.6], [1, 0])
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      pointerEvents: 'none', zIndex: 1,
+    }}>
+      <motion.div style={{ y, scale, opacity, position: 'relative' }}>
+        {/* Floating logo */}
+        <motion.img
+          src={LOGO_URL}
+          alt=""
+          animate={{ y: [0, -14, 0] }}
+          transition={{ duration: 4.2, repeat: Infinity, ease: 'easeInOut' }}
+          style={{
+            width: 'clamp(160px, 26vw, 300px)',
+            height: 'clamp(160px, 26vw, 300px)',
+            objectFit: 'contain',
+            mixBlendMode: 'screen',
+            display: 'block',
+            userSelect: 'none',
+            draggable: 'false',
+          }}
+        />
+
+        {/* Ripple rings — triggered by "Book Your Experience" click */}
+        <AnimatePresence>
+          {rippling && [0, 1, 2, 3].map(i => (
+            <motion.div
+              key={i}
+              initial={{ scale: 0.55, opacity: 0.85 }}
+              animate={{ scale: 4.2, opacity: 0 }}
+              exit={{}}
+              transition={{ duration: 1.4, delay: i * 0.2, ease: 'easeOut' }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                border: `1.5px solid ${GOLD}`,
+                borderRadius: '50%',
+                transformOrigin: 'center',
+                pointerEvents: 'none',
+              }}
+            />
+          ))}
+        </AnimatePresence>
       </motion.div>
     </div>
   )
@@ -1045,11 +1059,11 @@ function Footer() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function RegalCineLanding() {
-  const mouseRef  = useRef({ x: 0, y: 0 })
-  const scrollRef = useRef(0)
+  const mouseRef = useRef({ x: 0, y: 0 })
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [authState, setAuthState]     = useState({ user: null, token: null })
+  const [rippling, setRippling]       = useState(false)
 
   // Restore auth from localStorage on mount
   useEffect(() => {
@@ -1065,6 +1079,11 @@ export default function RegalCineLanding() {
     localStorage.removeItem('regalcine_auth')
   }, [])
 
+  const handleBookClick = useCallback(() => {
+    setRippling(true)
+    setTimeout(() => setRippling(false), 2400)
+  }, [])
+
   useEffect(() => {
     const onMouseMove = (e) => {
       mouseRef.current = { x: (e.clientX / window.innerWidth) * 2 - 1, y: -(e.clientY / window.innerHeight * 2 - 1) }
@@ -1073,15 +1092,12 @@ export default function RegalCineLanding() {
       const t = e.touches[0]; if (!t) return
       mouseRef.current = { x: (t.clientX / window.innerWidth) * 2 - 1, y: -(t.clientY / window.innerHeight * 2 - 1) }
     }
-    const onScroll = () => { scrollRef.current = window.scrollY }
 
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('touchmove', onTouchMove, { passive: true })
-    window.addEventListener('scroll',    onScroll,    { passive: true })
     return () => {
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('touchmove', onTouchMove)
-      window.removeEventListener('scroll',    onScroll)
     }
   }, [])
 
@@ -1100,14 +1116,15 @@ export default function RegalCineLanding() {
         onLogout={handleLogout}
       />
 
-      {/* ── Hero: 3D canvas + text overlay ── */}
+      {/* ── Hero: 3D canvas + logo image + text overlay ── */}
       <section style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
         <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 0, 7.5], fov: 48 }}
           gl={{ antialias: true, alpha: false, powerPreference: 'high-performance', failIfMajorPerformanceCaveat: false }}
           style={{ position: 'absolute', inset: 0 }}>
-          <Scene mouseRef={mouseRef} scrollRef={scrollRef} />
+          <Scene mouseRef={mouseRef} />
         </Canvas>
-        <HeroOverlay />
+        <RegalLogoOverlay rippling={rippling} />
+        <HeroOverlay onBookClick={handleBookClick} />
       </section>
 
       {/* ── Scrollable content sections ── */}
