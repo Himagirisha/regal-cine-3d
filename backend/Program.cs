@@ -24,9 +24,10 @@ var rawConn = Environment.GetEnvironmentVariable("DATABASE_URL")
 // Convert postgres:// URI → Npgsql format when running on Render/Railway
 if (rawConn.StartsWith("postgres://") || rawConn.StartsWith("postgresql://"))
 {
-    var uri     = new Uri(rawConn);
+    var uri      = new Uri(rawConn);
     var userInfo = uri.UserInfo.Split(':', 2);
-    rawConn = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};" +
+    var dbPort   = uri.Port == -1 ? 5432 : uri.Port;   // Render omits port in Internal URLs
+    rawConn = $"Host={uri.Host};Port={dbPort};Database={uri.AbsolutePath.TrimStart('/')};" +
               $"Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
 }
 
