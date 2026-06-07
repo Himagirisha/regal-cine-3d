@@ -1,9 +1,9 @@
 namespace RegalCine.Api.Models;
 
-/// <summary>Represents a private cinema suite reservation.</summary>
 public sealed class Booking
 {
     public int      Id              { get; set; }
+    public Guid?    UserId          { get; set; }   // null for guest bookings
     public string   GuestName       { get; set; } = string.Empty;
     public string   ContactNumber   { get; set; } = string.Empty;
     public string   CelebrationType { get; set; } = string.Empty;
