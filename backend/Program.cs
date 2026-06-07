@@ -60,11 +60,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
+// AllowAnyOrigin() is incompatible with credentialed requests (Authorization header).
+// Enumerate allowed origins explicitly so both guest and authenticated calls work.
+var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS") ?? "")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
-        policy.AllowAnyOrigin()
+    {
+        var origins = new[]
+        {
+            "https://himagirisha.github.io",
+            "http://localhost:5173",
+            "http://localhost:4173",
+        }.Concat(allowedOrigins).Distinct().ToArray();
+
+        policy.WithOrigins(origins)
               .AllowAnyHeader()
-              .AllowAnyMethod()));
+              .AllowAnyMethod()
+              .AllowCredentials();
+    }));
 
 // ── Swagger with Bearer auth support ─────────────────────────────────────────
 builder.Services.AddEndpointsApiExplorer();
@@ -101,11 +116,14 @@ using (var scope = app.Services.CreateScope())
     db.Database.EnsureCreated();
 }
 
+// CORS must be the first middleware so preflight OPTIONS requests get
+// the Access-Control-Allow-* headers before any other middleware fires.
+app.UseCors();
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Regal Cine API v1"));
 
-app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
