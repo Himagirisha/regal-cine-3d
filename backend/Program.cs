@@ -115,6 +115,27 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CineDbContext>();
     db.Database.EnsureCreated();
+
+    // ── Seed admin account ───────────────────────────────────────────────────
+    // If the user already exists but is a Customer, upgrade to Admin.
+    // If the user doesn't exist at all, create them as Admin.
+    var existing = await db.Users.FirstOrDefaultAsync(u => u.Username == "himagirish");
+    if (existing is null)
+    {
+        db.Users.Add(new User
+        {
+            Username     = "himagirish",
+            PasswordHash = HashPassword("Hima@123"),
+            Role         = "Admin",
+            CreatedAt    = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+    }
+    else if (existing.Role != "Admin")
+    {
+        existing.Role = "Admin";
+        await db.SaveChangesAsync();
+    }
 }
 
 // CORS must be the first middleware so preflight OPTIONS requests get

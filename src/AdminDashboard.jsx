@@ -127,7 +127,7 @@ export default function AdminDashboard({ navigate }) {
   }
 
   // ── Not admin
-  if (authState.user && authState.user.role !== 'admin' && !loading) {
+  if (authState.user && authState.user.role?.toLowerCase() !== 'admin' && !loading) {
     return (
       <div style={{ minHeight: '100vh', background: BG, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24, padding: 32 }}>
         <p style={{ fontFamily: SERIF, fontSize: 9, letterSpacing: '0.6em', color: '#e07070', textTransform: 'uppercase' }}>Access Denied</p>

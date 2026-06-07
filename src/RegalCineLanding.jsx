@@ -399,7 +399,7 @@ function Navbar({ authState, onLoginClick, onLogout, onAdminClick }) {
                   </div>
 
                   {/* Admin link */}
-                  {authState.user.role === 'admin' && (
+                  {authState.user.role?.toLowerCase() === 'admin' && (
                     <button
                       onClick={() => { setUserMenuOpen(false); onAdminClick() }}
                       style={{
@@ -499,7 +499,7 @@ function Navbar({ authState, onLoginClick, onLogout, onAdminClick }) {
                   <p style={{ fontFamily: SERIF, fontSize: 13, color: GOLD, letterSpacing: '0.12em', marginBottom: 10 }}>
                     {authState.user.username}
                   </p>
-                  {authState.user.role === 'admin' && (
+                  {authState.user.role?.toLowerCase() === 'admin' && (
                     <button onClick={() => { setMobileOpen(false); onAdminClick() }}
                       style={{ display: 'block', fontFamily: SERIF, fontSize: 12, letterSpacing: '0.22em', color: GOLD, background: 'none', border: 'none', cursor: 'pointer', textTransform: 'uppercase', padding: '6px 0', marginBottom: 6 }}>
                       Admin Dashboard →
