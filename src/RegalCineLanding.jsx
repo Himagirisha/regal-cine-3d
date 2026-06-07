@@ -1001,7 +1001,7 @@ function ReservationSection({ authToken }) {
             <p style={{ fontFamily: SERIF, fontSize: 12, letterSpacing: '0.28em', color: MUTED, textTransform: 'uppercase', marginBottom: 10 }}>
               Or Call Us Directly
             </p>
-            <a href="tel:+910000000000"
+            <a href="tel:+918892615477"
               style={{ fontFamily: SERIF, fontSize: 'clamp(22px,3.5vw,30px)', color: GOLD, letterSpacing: '0.08em', textDecoration: 'none', fontWeight: 300 }}>
               +91 000 000 0000
             </a>

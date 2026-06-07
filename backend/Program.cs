@@ -13,8 +13,9 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ── Port binding ─────────────────────────────────────────────────────────────
-builder.WebHost.UseUrls("http://0.0.0.0:8080");
+// ── Port binding — respect Render/Railway PORT env var, fall back to 8080 ───
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // ── Connection string: DATABASE_URL env var (Render/Railway) wins over appsettings
 var rawConn = Environment.GetEnvironmentVariable("DATABASE_URL")
